@@ -1,0 +1,48 @@
+services:
+  python-backend: &python_backend
+    build: 
+      context: .
+  jupyter-notebook:
+    <<: *python_backend
+    ports:
+      - "8888:8888"
+    volumes:
+      - type: bind
+        source: ./notebook
+        target: /notebook
+      - type: bind
+        source: ./data
+        target: /data
+    command: [ "poetry", "run", "jupyter", "notebook", "--notebook-dir=/notebook", "--allow-root", "--ip='*'", "--port=8888", "--no-browser" ]
+  cli:
+    <<: *python_backend
+    environment:
+      - CLOUDSDK_CORE_PROJECT=artful-sky-411117
+    volumes:
+      - type: bind
+        source: ./terraform
+        target: /terraform
+      - type: bind
+        source: ~/keys/gcp
+        target: /keys/gcp
+    command: [ "bash", "-c", "gcloud auth activate-service-account --key-file /keys/gcp/gcp_key.json && cd /terraform && terraform init && /bin/bash" ]
+    tty: true
+  postgres:
+    image: postgres:13
+    environment:
+      - POSTGRES_USER=root
+      - POSTGRES_PASSWORD=root
+      - POSTGRES_DB=ny_taxi
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+  pgadmin:
+    image: dpage/pgadmin4
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@admin.com
+      - PGADMIN_DEFAULT_PASSWORD=root
+    ports:
+      - "8080:80"
+
+volumes:
+  pg-data:
+    name: de-zoomcamp-pg-data
